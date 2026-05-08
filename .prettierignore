@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+tmp/
+dist/
+docs/assets/
+docs/vendor/
+docs/index.html
+docs/404.html
+docs/sw.js
+public/vendor/
+playwright-report/
+test-results/

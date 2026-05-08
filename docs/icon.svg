@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>Film Color Script Generator</title>
+  <rect width="128" height="128" rx="18" fill="#f8f5ed" />
+  <path d="M18 33h92v62H18z" fill="#18221d" />
+  <path d="M26 43h12v10H26zm22 0h12v10H48zm22 0h12v10H70zm22 0h12v10H92z" fill="#f8f5ed" />
+  <path d="M26 75h12v10H26zm22 0h12v10H48zm22 0h12v10H70zm22 0h12v10H92z" fill="#f8f5ed" />
+  <path d="M26 58h18v12H26z" fill="#d9825b" />
+  <path d="M44 58h18v12H44z" fill="#285f4e" />
+  <path d="M62 58h18v12H62z" fill="#d7e6eb" />
+  <path d="M80 58h22v12H80z" fill="#68506f" />
+</svg>
