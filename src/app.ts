@@ -300,10 +300,10 @@ async function readVideoMetadata(
 function makeDemoFrames(settings: GeneratorSettings): FrameAnalysis[] {
   const colors = [
     ["#1b1f33", "#37445f", "#b75d4a", "#f0b36d", "#f8dfb2"],
-    ["#20382f", "#5e7f62", "#c8b46a", "#e9d8a6", "#6a4738"],
-    ["#14252f", "#2b6c74", "#82b2a8", "#d7e6eb", "#f6efe3"],
-    ["#38263b", "#68506f", "#b16b7c", "#e7a66f", "#f8d9a8"],
-    ["#111714", "#285f4e", "#3d8b63", "#d9825b", "#f8f5ed"]
+    ["#7a3f20", "#c06438", "#f0b36d", "#e9d8a6", "#5a3328"],
+    ["#0a6370", "#2b8b92", "#82b2a8", "#d7e6eb", "#f6efe3"],
+    ["#6f315d", "#b16b7c", "#e7a66f", "#f8d9a8", "#38263b"],
+    ["#285f4e", "#3d8b63", "#a7c77c", "#d9825b", "#111714"]
   ];
 
   return colors.map((palette, index) => {
@@ -316,8 +316,8 @@ function makeDemoFrames(settings: GeneratorSettings): FrameAnalysis[] {
       },
       weight:
         colorIndex === 0
-          ? 0.32
-          : 0.68 / Math.max(1, Math.min(settings.paletteSize, palette.length) - 1)
+          ? 0.44
+          : 0.56 / Math.max(1, Math.min(settings.paletteSize, palette.length) - 1)
     }));
 
     const average = weighted[0] ?? {

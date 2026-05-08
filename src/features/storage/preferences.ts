@@ -6,7 +6,7 @@ const STORAGE_KEY = "film-color-script-generator:settings:v1";
 export const defaultSettings: GeneratorSettings = {
   sampleCount: 36,
   paletteSize: 5,
-  sceneSensitivity: 42,
+  sceneSensitivity: 70,
   maxFrameWidth: 360,
   stripMode: "duration"
 };

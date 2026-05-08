@@ -8,5 +8,6 @@ docs/index.html
 docs/404.html
 docs/sw.js
 public/vendor/
+src/generated/buildInfo.ts
 playwright-report/
 test-results/

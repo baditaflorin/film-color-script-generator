@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("loads the engine and renders an exportable strip", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
 
   await expect(page.getByRole("link", { name: /film color script/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /star/i })).toHaveAttribute(
