@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { makeConfidence } from "./confidence";
 import { createExportPayload, safeBaseName } from "./export";
 import type { GeneratorSettings, SceneAnalysis, VideoMetadata } from "./types";
 
@@ -20,6 +21,7 @@ const video: VideoMetadata = {
 };
 
 const scene: SceneAnalysis = {
+  id: "scene-001",
   index: 0,
   start: 0,
   end: 10,
@@ -28,7 +30,9 @@ const scene: SceneAnalysis = {
   frameIndices: [0],
   frameCount: 1,
   palette: [{ hex: "#d9825b", rgb: { r: 217, g: 130, b: 91 }, weight: 1 }],
-  average: { hex: "#d9825b", rgb: { r: 217, g: 130, b: 91 }, weight: 1 }
+  average: { hex: "#d9825b", rgb: { r: 217, g: 130, b: 91 }, weight: 1 },
+  confidence: makeConfidence(0.9, ["Test scene."]),
+  warnings: []
 };
 
 describe("export contract", () => {

@@ -20,6 +20,7 @@ import { buildInfo } from "./generated/buildInfo";
 import { fetchLatestMainCommit } from "./features/github/latestCommit";
 import { AppError, normalizeError } from "./lib/errors";
 import { logger } from "./lib/logger";
+import { makeConfidence } from "./features/color-script/confidence";
 import {
   canvasToPngBlob,
   createExportPayload,
@@ -327,12 +328,23 @@ function makeDemoFrames(settings: GeneratorSettings): FrameAnalysis[] {
     };
 
     return {
+      id: `demo-frame-${String(index + 1).padStart(2, "0")}`,
       index,
       time: index * 14,
+      timestampSource: "synthetic",
       width: 320,
       height: 180,
       palette: weighted,
-      average
+      average,
+      luminance: 90 + index * 12,
+      variance: 0.18,
+      artifacts: {
+        letterbox: false,
+        dark: false,
+        lowVariance: false,
+        titleCard: false
+      },
+      confidence: makeConfidence(0.86, ["Synthetic demo frame."])
     };
   });
 }

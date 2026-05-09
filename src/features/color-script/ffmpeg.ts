@@ -124,7 +124,7 @@ async function readPngFrames(
       Number.isFinite(videoDuration) && videoDuration > 0 && entries.length > 1
         ? (index / Math.max(1, entries.length - 1)) * videoDuration
         : index;
-    frames.push({ index, time, bytes: data });
+    frames.push({ index, time, timestampSource: "fps-estimate", bytes: data });
   }
 
   return frames;

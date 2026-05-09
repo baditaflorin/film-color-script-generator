@@ -25,6 +25,7 @@ export async function decodePngFrame(
   return {
     index: frame.index,
     time: frame.time,
+    timestampSource: frame.timestampSource,
     width: imageData.width,
     height: imageData.height,
     data: imageData.data,

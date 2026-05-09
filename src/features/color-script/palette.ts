@@ -1,4 +1,5 @@
 import type { DecodedFrameInput, FrameAnalysis, PaletteColor, RGB } from "./types";
+import { makeConfidence } from "./confidence";
 
 const MAX_DISTANCE = Math.sqrt(255 * 255 * 3);
 
@@ -55,6 +56,42 @@ function bucketKey(r: number, g: number, b: number): string {
   return `${r >> 4}:${g >> 4}:${b >> 4}`;
 }
 
+function pixelLuminance(r: number, g: number, b: number): number {
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function detectLetterbox(data: Uint8ClampedArray, width: number, height: number): boolean {
+  if (width <= 0 || height < 80) {
+    return false;
+  }
+
+  const edgeRows = Math.max(2, Math.floor(height * 0.08));
+  const centerStart = Math.floor(height * 0.42);
+  const centerEnd = Math.floor(height * 0.58);
+
+  const averageRows = (start: number, end: number): number => {
+    let total = 0;
+    let count = 0;
+    const step = Math.max(1, Math.floor(width / 80));
+
+    for (let y = start; y < end; y += 1) {
+      for (let x = 0; x < width; x += step) {
+        const offset = (y * width + x) * 4;
+        total += pixelLuminance(data[offset] ?? 0, data[offset + 1] ?? 0, data[offset + 2] ?? 0);
+        count += 1;
+      }
+    }
+
+    return count === 0 ? 0 : total / count;
+  };
+
+  const top = averageRows(0, edgeRows);
+  const bottom = averageRows(height - edgeRows, height);
+  const center = averageRows(centerStart, centerEnd);
+
+  return top < 28 && bottom < 28 && center > 45 && center - Math.max(top, bottom) > 25;
+}
+
 export function analyzePixelData(input: DecodedFrameInput): FrameAnalysis {
   const buckets = new Map<string, Bucket>();
   const totalPixels = input.width * input.height;
@@ -63,6 +100,8 @@ export function analyzePixelData(input: DecodedFrameInput): FrameAnalysis {
   let sumR = 0;
   let sumG = 0;
   let sumB = 0;
+  let sumLuminance = 0;
+  let sumLuminanceSquared = 0;
 
   for (let pixel = 0; pixel < totalPixels; pixel += stride) {
     const offset = pixel * 4;
@@ -91,6 +130,9 @@ export function analyzePixelData(input: DecodedFrameInput): FrameAnalysis {
     sumR += r;
     sumG += g;
     sumB += b;
+    const luminance = pixelLuminance(r, g, b);
+    sumLuminance += luminance;
+    sumLuminanceSquared += luminance * luminance;
   }
 
   const candidates = [...buckets.values()]
@@ -131,10 +173,40 @@ export function analyzePixelData(input: DecodedFrameInput): FrameAnalysis {
     g: sampled === 0 ? 0 : sumG / sampled,
     b: sampled === 0 ? 0 : sumB / sampled
   };
+  const luminance = sampled === 0 ? 0 : sumLuminance / sampled;
+  const rawVariance = sampled === 0 ? 0 : sumLuminanceSquared / sampled - luminance * luminance;
+  const variance = Math.max(0, rawVariance / (255 * 255));
+  const artifacts = {
+    letterbox: detectLetterbox(input.data, input.width, input.height),
+    dark: luminance < 38,
+    lowVariance: variance < 0.006,
+    titleCard: variance < 0.012 && luminance > 180
+  };
+  const reasons = ["Palette extracted from decoded frame pixels."];
+  let confidenceScore = 0.9;
+
+  if (artifacts.letterbox) {
+    confidenceScore -= 0.18;
+    reasons.push("Likely letterbox bars were detected.");
+  }
+  if (artifacts.dark) {
+    confidenceScore -= 0.12;
+    reasons.push("Frame is very dark, so palette confidence is lower.");
+  }
+  if (artifacts.lowVariance) {
+    confidenceScore -= 0.1;
+    reasons.push("Frame has low luminance variance.");
+  }
+  if (input.timestampSource === "fps-estimate") {
+    confidenceScore -= 0.08;
+    reasons.push("Frame timestamp is estimated from sampling cadence.");
+  }
 
   return {
+    id: `frame-${String(input.index + 1).padStart(4, "0")}`,
     index: input.index,
     time: input.time,
+    timestampSource: input.timestampSource,
     width: input.width,
     height: input.height,
     palette: normalizeWeights(palette),
@@ -146,7 +218,11 @@ export function analyzePixelData(input: DecodedFrameInput): FrameAnalysis {
         b: clampByte(averageRgb.b)
       },
       weight: 1
-    }
+    },
+    luminance: Number(luminance.toFixed(2)),
+    variance: Number(variance.toFixed(6)),
+    artifacts,
+    confidence: makeConfidence(confidenceScore, reasons)
   };
 }
 

@@ -1,5 +1,6 @@
 import { averageFrameColor, mergePalettes, paletteDistance } from "./palette";
 import type { FrameAnalysis, GeneratorSettings, SceneAnalysis } from "./types";
+import { combineConfidence, makeConfidence } from "./confidence";
 
 function sensitivityToThreshold(sensitivity: number): number {
   const normalized = Math.max(0, Math.min(100, sensitivity)) / 100;
@@ -21,8 +22,33 @@ function makeScene(
 
   const start = first.time;
   const duration = Math.max(0.01, end - start);
+  const warnings = new Set<string>();
+
+  if (frames.some((frame) => frame.artifacts.letterbox)) {
+    warnings.add("letterbox-risk");
+  }
+  if (frames.some((frame) => frame.artifacts.dark)) {
+    warnings.add("dark-frame-risk");
+  }
+  if (frames.some((frame) => frame.artifacts.lowVariance)) {
+    warnings.add("low-variance");
+  }
+  if (frames.some((frame) => frame.timestampSource === "fps-estimate")) {
+    warnings.add("estimated-timing");
+  }
+  if (frames.length === 1) {
+    warnings.add("single-frame-scene");
+  }
+
+  const confidence = combineConfidence(
+    frames.map((frame) => frame.confidence),
+    warnings.size > 0
+      ? [`Scene warnings: ${[...warnings].join(", ")}.`]
+      : ["Scene grouped from adjacent palette distance."]
+  );
 
   return {
+    id: `scene-${String(index + 1).padStart(3, "0")}`,
     index,
     start,
     end,
@@ -31,7 +57,9 @@ function makeScene(
     frameIndices: frames.map((frame) => frame.index),
     frameCount: frames.length,
     palette: mergePalettes(frames, settings.paletteSize),
-    average: averageFrameColor(frames)
+    average: averageFrameColor(frames),
+    confidence: frames.length === 0 ? makeConfidence(0.4, ["No frames in scene."]) : confidence,
+    warnings: [...warnings].sort()
   };
 }
 

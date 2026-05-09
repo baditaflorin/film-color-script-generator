@@ -16,6 +16,7 @@ function frameFromPixels(pixels: Array<[number, number, number]>): DecodedFrameI
   return {
     index: 0,
     time: 0,
+    timestampSource: "synthetic",
     width: pixels.length,
     height: 1,
     data,

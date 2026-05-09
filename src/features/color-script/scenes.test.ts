@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { makeConfidence } from "./confidence";
 import { groupFramesIntoScenes, sceneCountLabel } from "./scenes";
 import type { FrameAnalysis, GeneratorSettings, PaletteColor } from "./types";
 
@@ -25,12 +26,23 @@ function color(hex: string): PaletteColor {
 function frame(index: number, time: number, hex: string): FrameAnalysis {
   const paletteColor = color(hex);
   return {
+    id: `frame-${index}`,
     index,
     time,
+    timestampSource: "synthetic",
     width: 16,
     height: 16,
     palette: [paletteColor],
-    average: paletteColor
+    average: paletteColor,
+    luminance: 80,
+    variance: 0.2,
+    artifacts: {
+      letterbox: false,
+      dark: false,
+      lowVariance: false,
+      titleCard: false
+    },
+    confidence: makeConfidence(0.9, ["Synthetic test frame."])
   };
 }
 
