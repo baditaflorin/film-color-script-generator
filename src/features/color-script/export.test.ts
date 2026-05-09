@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeConfidence } from "./confidence";
-import { createExportPayload, safeBaseName } from "./export";
+import { createCanonicalAnalysisJson, createExportPayload, safeBaseName } from "./export";
+import { preflightVideo } from "./preflight";
 import type { GeneratorSettings, SceneAnalysis, VideoMetadata } from "./types";
 
 const settings: GeneratorSettings = {
@@ -35,13 +36,37 @@ const scene: SceneAnalysis = {
   warnings: []
 };
 
+const preflight = preflightVideo(
+  { name: video.name, type: video.type, sizeBytes: video.size },
+  {
+    duration: video.duration,
+    width: video.width,
+    height: video.height,
+    hasVideo: true,
+    frameRateMode: "constant"
+  },
+  settings
+);
+
 describe("export contract", () => {
   it("creates schema-valid JSON payloads", () => {
-    const payload = createExportPayload(video, settings, [scene]);
+    const payload = createExportPayload(video, settings, [scene], preflight);
 
-    expect(payload.schemaVersion).toBe(1);
+    expect(payload.schemaVersion).toBe(2);
     expect(payload.source.name).toBe("My Film.mov");
+    expect(payload.sourceFingerprint).toBe(preflight.sourceFingerprint);
+    expect(payload.preflight?.plan.sampleCount).toBeGreaterThan(0);
+    expect(payload.scenes[0]?.id).toBe("scene-001");
+    expect(payload.scenes[0]?.confidence.label).toBe("high");
     expect(payload.scenes[0]?.palette[0]?.hex).toBe("#d9825b");
+  });
+
+  it("keeps canonical analysis byte-identical for identical input", () => {
+    const first = createCanonicalAnalysisJson(video, settings, [scene], preflight);
+    const second = createCanonicalAnalysisJson(video, settings, [scene], preflight);
+
+    expect(first).toBe(second);
+    expect(first).toContain('"sourceFingerprint"');
   });
 
   it("normalizes export names", () => {

@@ -31,6 +31,7 @@ import {
 } from "./features/color-script/export";
 import { extractPngFrames, warmupFFmpeg } from "./features/color-script/ffmpeg";
 import { decodePngFrame } from "./features/color-script/frameDecode";
+import { preflightVideo } from "./features/color-script/preflight";
 import { groupFramesIntoScenes, sceneCountLabel } from "./features/color-script/scenes";
 import {
   createPaletteWorkerClient,
@@ -40,9 +41,11 @@ import { defaultSettings, loadSettings, saveSettings } from "./features/storage/
 import type {
   FrameAnalysis,
   GeneratorSettings,
+  InferenceConfidence,
   ProcessingProgress,
   SceneAnalysis,
-  VideoMetadata
+  VideoMetadata,
+  VideoPreflight
 } from "./features/color-script/types";
 
 interface AppRefs {
@@ -73,6 +76,7 @@ interface AppRefs {
   exportSvg: HTMLButtonElement;
   version: HTMLElement;
   commit: HTMLAnchorElement;
+  debugPanel: HTMLPreElement;
 }
 
 function icon(node: IconNode, label: string): string {
@@ -218,6 +222,7 @@ function template(): string {
         <div class="scene-list" data-ref="sceneList" aria-label="Scenes"></div>
       </section>
     </main>
+    <pre class="debug-panel" data-ref="debugPanel" hidden></pre>
   `;
 }
 
@@ -260,10 +265,72 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function setDisabled(buttons: HTMLButtonElement[], disabled: boolean): void {
-  for (const button of buttons) {
-    button.disabled = disabled;
+function setDisabled(
+  elements: Array<HTMLInputElement | HTMLButtonElement>,
+  disabled: boolean
+): void {
+  for (const element of elements) {
+    element.disabled = disabled;
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      default:
+        return "&#039;";
+    }
+  });
+}
+
+function confidenceText(confidence: InferenceConfidence): string {
+  return `${confidence.label} ${Math.round(confidence.score * 100)}%`;
+}
+
+function preflightSummary(preflight: VideoPreflight): string {
+  const base = `${confidenceText(preflight.confidence)} confidence`;
+  if (preflight.blocked) {
+    return `${base} · blocked: ${preflight.errors.join(", ")}`;
+  }
+  if (preflight.warnings.length > 0) {
+    return `${base} · ${preflight.warnings.join(", ")}`;
+  }
+  return `${base} · ready`;
+}
+
+function applyRecommendedPlan(
+  currentSettings: GeneratorSettings,
+  preflight: VideoPreflight
+): GeneratorSettings {
+  if (preflight.blocked) {
+    return currentSettings;
+  }
+
+  return {
+    ...currentSettings,
+    sampleCount: preflight.plan.sampleCount,
+    paletteSize: preflight.plan.paletteSize,
+    sceneSensitivity: preflight.plan.sceneSensitivity,
+    maxFrameWidth: preflight.plan.maxFrameWidth,
+    stripMode: preflight.plan.stripMode
+  };
+}
+
+function appErrorFromBlockedPreflight(preflight: VideoPreflight): AppError {
+  return new AppError("unsupported-file", "This video cannot produce a color script yet.", {
+    hint:
+      preflight.errors.length > 0
+        ? `Reason: ${preflight.errors.join(", ")}. Try a complete file with a video track.`
+        : "Try another export with a standard video track."
+  });
 }
 
 async function readVideoMetadata(
@@ -351,8 +418,10 @@ function makeDemoFrames(settings: GeneratorSettings): FrameAnalysis[] {
 
 export function mountApp(root: HTMLElement): void {
   root.innerHTML = template();
+  const debugEnabled = new URLSearchParams(window.location.search).get("debug") === "1";
   root.dataset.engineState = "idle";
   root.dataset.stripState = "empty";
+  root.dataset.appState = "idle";
 
   const refs: AppRefs = {
     fileInput: ref(root, "fileInput"),
@@ -381,35 +450,78 @@ export function mountApp(root: HTMLElement): void {
     exportJson: action(root, "exportJson"),
     exportSvg: action(root, "exportSvg"),
     version: ref(root, "version"),
-    commit: ref(root, "commit")
+    commit: ref(root, "commit"),
+    debugPanel: ref(root, "debugPanel")
   };
 
   let settings = loadSettings();
   let selectedFile: File | null = null;
   let video: VideoMetadata | null = null;
+  let preflight: VideoPreflight | null = null;
   let previewUrl: string | null = null;
   let frames: FrameAnalysis[] = [];
   let scenes: SceneAnalysis[] = [];
   let worker: PaletteWorkerClient | null = null;
   let abortController: AbortController | null = null;
+  let lastStatus = "Idle";
+
+  refs.debugPanel.hidden = !debugEnabled;
+
+  const updateDebugPanel = (): void => {
+    if (!debugEnabled) {
+      return;
+    }
+
+    refs.debugPanel.textContent = JSON.stringify(
+      {
+        appState: root.dataset.appState,
+        engineState: root.dataset.engineState,
+        stripState: root.dataset.stripState,
+        status: lastStatus,
+        settings,
+        video,
+        preflight,
+        frameCount: frames.length,
+        scenes: scenes.map((scene) => ({
+          id: scene.id,
+          range: [scene.start, scene.end],
+          frames: scene.frameIndices,
+          confidence: scene.confidence,
+          warnings: scene.warnings
+        }))
+      },
+      null,
+      2
+    );
+  };
 
   const setStatus = (progress: ProcessingProgress): void => {
+    lastStatus = progress.message;
     refs.status.textContent = progress.message;
     refs.progress.style.width = `${Math.round(Math.max(0, Math.min(1, progress.value)) * 100)}%`;
+    updateDebugPanel();
   };
 
   const setError = (error: unknown): void => {
     const appError = normalizeError(error, "Processing failed.");
+    lastStatus = appError.userMessage;
     refs.status.textContent = appError.hint
       ? `${appError.userMessage} ${appError.hint}`
       : appError.userMessage;
     refs.progress.style.width = "0%";
+    root.dataset.appState =
+      appError.code === "cancelled"
+        ? "cancelled"
+        : appError.code === "unknown"
+          ? "error-fatal"
+          : "error-recoverable";
+    updateDebugPanel();
     logger.warn("App error", appError);
   };
 
   const setBusy = (busy: boolean): void => {
-    setDisabled([refs.fileInput as unknown as HTMLButtonElement], busy);
-    refs.generate.disabled = busy || !selectedFile;
+    setDisabled([refs.fileInput], busy);
+    refs.generate.disabled = busy || !selectedFile || Boolean(preflight?.blocked);
     refs.loadEngine.disabled = busy;
     refs.demo.disabled = busy;
     refs.cancel.disabled = !busy;
@@ -433,6 +545,7 @@ export function mountApp(root: HTMLElement): void {
     refs.exportJson.disabled = !ready;
     refs.exportSvg.disabled = !ready;
     root.dataset.stripState = ready ? "ready" : "empty";
+    updateDebugPanel();
   };
 
   const renderScenes = (): void => {
@@ -441,9 +554,10 @@ export function mountApp(root: HTMLElement): void {
     for (const scene of scenes) {
       const item = document.createElement("article");
       item.className = "scene-item";
+      const reasons = [...scene.confidence.reasons, ...scene.warnings].join(" ");
       item.innerHTML = `
         <span class="scene-index">${String(scene.index + 1).padStart(2, "0")}</span>
-        <span class="scene-time">${formatDuration(scene.start)}-${formatDuration(scene.end)}</span>
+        <span class="scene-time" title="${escapeHtml(reasons)}">${formatDuration(scene.start)}-${formatDuration(scene.end)} · ${confidenceText(scene.confidence)}</span>
         <span class="scene-swatches"></span>
       `;
       const swatches = item.querySelector<HTMLElement>(".scene-swatches");
@@ -457,6 +571,7 @@ export function mountApp(root: HTMLElement): void {
 
       refs.sceneList.append(item);
     }
+    updateDebugPanel();
   };
 
   const renderStrip = (): void => {
@@ -490,6 +605,9 @@ export function mountApp(root: HTMLElement): void {
     renderStrip();
     renderScenes();
     refs.status.textContent = sceneCountLabel(scenes.length);
+    lastStatus = refs.status.textContent;
+    root.dataset.appState = "ready";
+    updateDebugPanel();
   };
 
   const updateSettings = (): void => {
@@ -506,23 +624,28 @@ export function mountApp(root: HTMLElement): void {
     if (frames.length > 0) {
       regroup();
     }
+    updateDebugPanel();
   };
 
   const loadEngine = async (): Promise<void> => {
     const controller = new AbortController();
     root.dataset.engineState = "loading";
+    root.dataset.appState = "loading-engine";
     refs.loadEngine.disabled = true;
 
     try {
       await warmupFFmpeg(setStatus, controller.signal);
       root.dataset.engineState = "ready";
       refs.status.textContent = "Engine ready";
+      lastStatus = "Engine ready";
       refs.progress.style.width = "100%";
+      root.dataset.appState = video ? "loaded" : "idle";
     } catch (error) {
       root.dataset.engineState = "error";
       setError(error);
     } finally {
       refs.loadEngine.disabled = false;
+      updateDebugPanel();
     }
   };
 
@@ -535,20 +658,51 @@ export function mountApp(root: HTMLElement): void {
       previewUrl = URL.createObjectURL(file);
       selectedFile = file;
       video = await readVideoMetadata(file, refs.videoPreview, previewUrl);
+      preflight = preflightVideo(
+        { name: file.name, type: file.type || "video", sizeBytes: file.size },
+        {
+          duration: video.duration,
+          width: video.width,
+          height: video.height,
+          hasVideo: video.duration > 0 && video.width > 0 && video.height > 0,
+          frameRateMode: "unknown"
+        },
+        settings
+      );
+      settings = applyRecommendedPlan(settings, preflight);
+      saveSettings(settings);
       frames = [];
       scenes = [];
 
       refs.fileName.textContent = video.name;
-      refs.fileMeta.textContent = `${formatDuration(video.duration)} · ${video.width}x${video.height} · ${formatBytes(video.size)}`;
-      refs.generate.disabled = false;
-      refs.status.textContent = "Ready";
+      refs.fileMeta.textContent = `${formatDuration(video.duration)} · ${video.width}x${video.height} · ${formatBytes(video.size)} · ${preflightSummary(preflight)}`;
+      refs.generate.disabled = preflight.blocked;
+      refs.status.textContent = preflight.blocked
+        ? "This file is not analyzable"
+        : `Ready · ${preflight.plan.sampleCount} samples inferred`;
+      lastStatus = refs.status.textContent;
       refs.progress.style.width = "0%";
+      root.dataset.appState = preflight.blocked ? "error-recoverable" : "loaded";
+      renderSettings();
       renderStrip();
       renderScenes();
     } catch (error) {
+      preflight = preflightVideo(
+        { name: file.name, type: file.type || "video", sizeBytes: file.size, partial: true },
+        { duration: 0, width: 0, height: 0, hasVideo: false, frameRateMode: "unknown" },
+        settings,
+        ["metadata-failed"]
+      );
       selectedFile = null;
       video = null;
+      frames = [];
+      scenes = [];
+      refs.fileName.textContent = file.name;
+      refs.fileMeta.textContent = `${formatBytes(file.size)} · ${preflightSummary(preflight)}`;
       refs.generate.disabled = true;
+      root.dataset.appState = "error-recoverable";
+      renderStrip();
+      renderScenes();
       setError(error);
     }
   };
@@ -557,11 +711,20 @@ export function mountApp(root: HTMLElement): void {
     if (!selectedFile || !video) {
       throw new AppError("unsupported-file", "Choose a video file.");
     }
+    if (abortController) {
+      throw new AppError("frame-extract-failed", "Generation is already running.", {
+        hint: "Cancel the current run before starting another one."
+      });
+    }
+    if (preflight?.blocked) {
+      throw appErrorFromBlockedPreflight(preflight);
+    }
 
     abortController = new AbortController();
     worker?.dispose();
     worker = createPaletteWorkerClient();
     setBusy(true);
+    root.dataset.appState = "in-progress";
     frames = [];
     scenes = [];
     renderStrip();
@@ -577,6 +740,9 @@ export function mountApp(root: HTMLElement): void {
       );
 
       for (const [index, pngFrame] of pngFrames.entries()) {
+        if (abortController.signal.aborted) {
+          throw new DOMException("Operation aborted.", "AbortError");
+        }
         const decoded = await decodePngFrame(pngFrame, settings.paletteSize);
         const frame = await worker.analyzeFrame(decoded);
         frames.push(frame);
@@ -592,30 +758,47 @@ export function mountApp(root: HTMLElement): void {
       renderStrip();
       renderScenes();
       setStatus({ phase: "done", value: 1, message: sceneCountLabel(scenes.length) });
+      root.dataset.appState = "ready";
     } catch (error) {
       setError(error);
     } finally {
       setBusy(false);
       abortController = null;
+      updateDebugPanel();
     }
   };
 
   const runDemo = (): void => {
     video = {
       name: "demo-color-script",
-      size: 0,
+      size: 2_500_000,
       type: "demo",
       duration: 70,
       width: 320,
       height: 180
     };
     selectedFile = null;
+    preflight = preflightVideo(
+      { name: video.name, type: "video/demo", sizeBytes: video.size },
+      {
+        duration: video.duration,
+        width: video.width,
+        height: video.height,
+        hasVideo: true,
+        frameRateMode: "constant"
+      },
+      settings
+    );
+    settings = applyRecommendedPlan(settings, preflight);
+    saveSettings(settings);
     refs.fileName.textContent = "demo-color-script";
-    refs.fileMeta.textContent = "1:10 · synthetic palette study";
+    refs.fileMeta.textContent = `1:10 · synthetic palette study · ${preflightSummary(preflight)}`;
     frames = makeDemoFrames(settings);
     scenes = groupFramesIntoScenes(frames, settings, video.duration);
     refs.generate.disabled = true;
     refs.videoPreview.hidden = true;
+    root.dataset.appState = "ready";
+    renderSettings();
     renderStrip();
     renderScenes();
     setStatus({ phase: "done", value: 1, message: sceneCountLabel(scenes.length) });
@@ -645,7 +828,7 @@ export function mountApp(root: HTMLElement): void {
     }
 
     try {
-      const payload = createExportPayload(video, settings, scenes);
+      const payload = createExportPayload(video, settings, scenes, preflight ?? undefined);
       downloadBlob(
         new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
         `${safeBaseName(video.name) || "color-script"}.color-script.json`
@@ -715,6 +898,7 @@ export function mountApp(root: HTMLElement): void {
 
   renderSettings();
   renderExports();
+  updateDebugPanel();
 
   const latestAbort = new AbortController();
   window.setTimeout(() => latestAbort.abort(), 3500);

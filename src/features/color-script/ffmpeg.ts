@@ -5,6 +5,16 @@ import type { FFmpeg as FFmpegInstance } from "@ffmpeg/ffmpeg";
 
 type FileData = Uint8Array | string;
 
+interface ProbeFrame {
+  best_effort_timestamp_time?: string;
+  pkt_pts_time?: string;
+  pict_type?: string;
+}
+
+interface ProbeOutput {
+  frames?: ProbeFrame[];
+}
+
 let ffmpegPromise: Promise<FFmpegInstance> | null = null;
 
 function assertNotAborted(signal?: AbortSignal): void {
@@ -108,7 +118,8 @@ async function clearFrames(ffmpeg: FFmpegInstance, directory: string): Promise<v
 async function readPngFrames(
   ffmpeg: FFmpegInstance,
   directory: string,
-  videoDuration: number
+  videoDuration: number,
+  measuredTimestamps: number[] = []
 ): Promise<ExtractedPngFrame[]> {
   const entries = ((await ffmpeg.listDir(directory)) as Array<{ name: string; isDir: boolean }>)
     .filter((entry) => !entry.isDir && entry.name.endsWith(".png"))
@@ -120,14 +131,73 @@ async function readPngFrames(
     const data = normalizeFileData(
       (await ffmpeg.readFile(`${directory}/${entry.name}`)) as FileData
     );
-    const time =
+    const measuredTime = measuredTimestamps[index];
+    const hasMeasuredTime = typeof measuredTime === "number" && Number.isFinite(measuredTime);
+    const estimatedTime =
       Number.isFinite(videoDuration) && videoDuration > 0 && entries.length > 1
         ? (index / Math.max(1, entries.length - 1)) * videoDuration
         : index;
-    frames.push({ index, time, timestampSource: "fps-estimate", bytes: data });
+    frames.push({
+      index,
+      time: hasMeasuredTime ? measuredTime : estimatedTime,
+      timestampSource: hasMeasuredTime ? "ffprobe-keyframe" : "fps-estimate",
+      bytes: data
+    });
   }
 
   return frames;
+}
+
+async function probeKeyframeTimestamps(
+  ffmpeg: FFmpegInstance,
+  inputName: string,
+  signal?: AbortSignal
+): Promise<number[]> {
+  const outputName = `/probe_${crypto.randomUUID().replaceAll("-", "")}.json`;
+
+  try {
+    const exit = await ffmpeg.ffprobe(
+      [
+        "-v",
+        "error",
+        "-skip_frame",
+        "nokey",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "frame=best_effort_timestamp_time,pkt_pts_time,pict_type",
+        "-of",
+        "json",
+        inputName,
+        "-o",
+        outputName
+      ],
+      -1,
+      ffmpegOptions(signal)
+    );
+
+    if (exit !== 0) {
+      return [];
+    }
+
+    const raw = (await ffmpeg.readFile(outputName, "utf8", ffmpegOptions(signal))) as FileData;
+    const text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
+    const parsed = JSON.parse(text) as ProbeOutput;
+
+    return (parsed.frames ?? [])
+      .map((frame) => Number(frame.best_effort_timestamp_time ?? frame.pkt_pts_time))
+      .filter((time) => Number.isFinite(time) && time >= 0)
+      .sort((a, b) => a - b);
+  } catch (error) {
+    logger.warn("FFprobe key-frame timestamp lookup failed", error);
+    return [];
+  } finally {
+    try {
+      await ffmpeg.deleteFile(outputName);
+    } catch {
+      // The probe file may not exist when ffprobe fails before writing output.
+    }
+  }
 }
 
 async function runExtraction(
@@ -159,6 +229,7 @@ export async function extractPngFrames(
       ffmpegOptions(signal)
     );
     await ffmpeg.createDir(frameDir);
+    const keyframeTimestamps = await probeKeyframeTimestamps(ffmpeg, inputName, signal);
 
     const keyFrameArgs = [
       "-skip_frame",
@@ -175,7 +246,7 @@ export async function extractPngFrames(
     ];
 
     const keyFrameExit = await runExtraction(ffmpeg, keyFrameArgs, signal);
-    let frames = await readPngFrames(ffmpeg, frameDir, videoDuration);
+    let frames = await readPngFrames(ffmpeg, frameDir, videoDuration, keyframeTimestamps);
 
     if (keyFrameExit !== 0 || frames.length < Math.max(3, Math.floor(settings.sampleCount / 4))) {
       await clearFrames(ffmpeg, frameDir);

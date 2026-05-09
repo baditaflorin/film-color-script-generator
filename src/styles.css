@@ -415,6 +415,7 @@ a {
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .scene-swatches {
@@ -429,6 +430,21 @@ a {
 
 .scene-swatches span {
   min-width: 0;
+}
+
+.debug-panel {
+  width: min(1500px, calc(100% - 32px));
+  max-height: 420px;
+  margin: 0 auto 32px;
+  overflow: auto;
+  border: 1px solid rgba(24, 34, 29, 0.14);
+  border-radius: 8px;
+  padding: 14px;
+  background: #111714;
+  color: #d7e6eb;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 900px) {

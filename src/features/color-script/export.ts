@@ -1,7 +1,13 @@
 import { buildInfo } from "../../generated/buildInfo";
 import { AppError } from "../../lib/errors";
 import { colorScriptExportSchema, type ColorScriptExport } from "./schema";
-import type { GeneratorSettings, PaletteColor, SceneAnalysis, VideoMetadata } from "./types";
+import type {
+  GeneratorSettings,
+  PaletteColor,
+  SceneAnalysis,
+  VideoMetadata,
+  VideoPreflight
+} from "./types";
 
 export interface StripRenderOptions {
   width: number;
@@ -86,16 +92,55 @@ export function renderStripCanvas(
 export function createExportPayload(
   video: VideoMetadata,
   settings: GeneratorSettings,
-  scenes: SceneAnalysis[]
+  scenes: SceneAnalysis[],
+  preflight?: VideoPreflight
 ): ColorScriptExport {
   return colorScriptExportSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     appVersion: buildInfo.version,
+    commit: buildInfo.fullCommit,
+    sourceFingerprint: preflight?.sourceFingerprint,
     source: video,
     settings,
+    preflight,
     scenes,
     generatedAt: new Date().toISOString()
   });
+}
+
+export function createCanonicalAnalysisJson(
+  video: VideoMetadata,
+  settings: GeneratorSettings,
+  scenes: SceneAnalysis[],
+  preflight?: VideoPreflight
+): string {
+  const payload = colorScriptExportSchema.parse({
+    schemaVersion: 2,
+    appVersion: buildInfo.version,
+    commit: buildInfo.fullCommit,
+    sourceFingerprint: preflight?.sourceFingerprint,
+    source: video,
+    settings,
+    preflight,
+    scenes,
+    generatedAt: "1970-01-01T00:00:00.000Z"
+  });
+
+  return `${stableStringify(payload)}\n`;
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value)
+      .filter(([, item]) => item !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 export function createSvgStrip(scenes: SceneAnalysis[], settings: GeneratorSettings): string {
