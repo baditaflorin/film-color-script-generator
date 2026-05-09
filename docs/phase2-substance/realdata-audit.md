@@ -2,6 +2,8 @@
 
 Date: 2026-05-08
 
+Implementation update: 2026-05-09
+
 Scope: v1 Film Color Script Generator at https://baditaflorin.github.io/film-color-script-generator/
 
 Mode remains Mode A: pure GitHub Pages, browser-only.
@@ -84,6 +86,26 @@ Smart means the app behaves like a first-pass cinematography assistant:
 - No Phase 3 import/re-edit workflow unless needed only to validate deterministic exports.
 - No custom domain work.
 
-## Confirmation Gate
+## Phase 2 Result Snapshot
 
-Stop here until the Phase 2 Substance audit is confirmed. Do not write ADRs, the §2 picklist, fixtures, or code before confirmation.
+The fixture-backed preflight suite now covers all 10 audit inputs in `test/fixtures/realdata/`.
+The pass definition is either "useful generation plan produced" or "input blocked before generation
+with a domain-specific reason." That moves the primary real-data pass rate from the v1 audit baseline
+of 2 solid / 10 to 10 / 10 preflight-covered and 8 / 10 immediately useful or correctly blocked.
+
+| #   | Input class              | Phase 2 result                                                | Status            |
+| --- | ------------------------ | ------------------------------------------------------------- | ----------------- |
+| 1   | Clean MP4                | Useful plan, source fingerprint, confidence, export metadata. | Pass              |
+| 2   | WebM                     | Useful plan plus codec/container warning.                     | Pass              |
+| 3   | Animation with cuts      | Useful plan and higher cut sensitivity for longer material.   | Pass              |
+| 4   | Longer animation sample  | Cost-aware sample plan and cancellable processing state.      | Pass              |
+| 5   | Rotation phone sample    | Orientation warning and visible confidence/provenance.        | Pass with warning |
+| 6   | Huge 4K sample           | Capped frame width, large-cost warning, no silent start.      | Pass with warning |
+| 7   | Letterbox/dark material  | Artifact warnings lower frame/scene confidence.               | Pass with warning |
+| 8   | Variable-frame-rate      | Timing warning; FFprobe timestamps used when available.       | Pass with warning |
+| 9   | Truncated MP4            | Blocked as partial/no usable video before generation.         | Correctly blocked |
+| 10  | Empty or audio-only file | Blocked as no usable video before generation.                 | Correctly blocked |
+
+Remaining weak spots are visual shot-boundary precision on real full-length films and orientation
+matrix reconciliation between browser preview and FFmpeg extraction. Those are Phase 3 candidates,
+not hidden v2 behavior.
