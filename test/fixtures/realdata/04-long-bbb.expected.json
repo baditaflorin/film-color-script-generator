@@ -1,0 +1,12 @@
+{
+  "id": "04-long-bbb",
+  "expectedPass": true,
+  "blocked": false,
+  "expectedWarnings": ["large-file", "long-duration"],
+  "expectedPlan": {
+    "sampleCountMin": 64,
+    "sampleCountMax": 96,
+    "maxFrameWidthMax": 360
+  },
+  "minConfidence": 0.58
+}

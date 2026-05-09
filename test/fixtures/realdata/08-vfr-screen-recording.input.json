@@ -1,0 +1,21 @@
+{
+  "id": "08-vfr-screen-recording",
+  "label": "Variable-frame-rate phone screen recording",
+  "sourceUrl": "user-owned-realdata://vfr-screen-recording",
+  "category": "variable-frame-rate",
+  "file": {
+    "name": "screen-recording-vfr.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 23841222,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 42.8,
+    "width": 1170,
+    "height": 2532,
+    "hasVideo": true,
+    "rotationDegrees": 0,
+    "frameRateMode": "variable"
+  },
+  "riskHints": ["vfr", "portrait-display"]
+}

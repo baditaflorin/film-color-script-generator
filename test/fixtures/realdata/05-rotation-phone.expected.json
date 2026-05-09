@@ -1,0 +1,12 @@
+{
+  "id": "05-rotation-phone",
+  "expectedPass": true,
+  "blocked": false,
+  "expectedWarnings": ["orientation-metadata", "variable-frame-rate"],
+  "expectedPlan": {
+    "sampleCountMin": 16,
+    "sampleCountMax": 32,
+    "maxFrameWidthMax": 360
+  },
+  "minConfidence": 0.55
+}

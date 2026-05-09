@@ -1,0 +1,21 @@
+{
+  "id": "10-audio-empty",
+  "label": "Audio-only or empty MP4-like file",
+  "sourceUrl": "user-owned-realdata://audio-only-or-empty-export",
+  "category": "no-video",
+  "file": {
+    "name": "audio-or-empty.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 0,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 0,
+    "width": 0,
+    "height": 0,
+    "hasVideo": false,
+    "rotationDegrees": 0,
+    "frameRateMode": "unknown"
+  },
+  "riskHints": ["empty", "no-video-track"]
+}

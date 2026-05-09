@@ -1,0 +1,21 @@
+{
+  "id": "09-truncated-mp4",
+  "label": "Truncated partial MP4 download",
+  "sourceUrl": "derived-from-realdata://partial-download-of-public-sample",
+  "category": "partial",
+  "file": {
+    "name": "partial-download.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 98304,
+    "partial": true
+  },
+  "metadata": {
+    "duration": 0,
+    "width": 0,
+    "height": 0,
+    "hasVideo": false,
+    "rotationDegrees": 0,
+    "frameRateMode": "unknown"
+  },
+  "riskHints": ["partial", "metadata-failed"]
+}

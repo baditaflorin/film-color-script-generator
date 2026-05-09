@@ -1,0 +1,21 @@
+{
+  "id": "06-4k-bbb",
+  "label": "4K Big Buck Bunny test clip",
+  "sourceUrl": "https://test-videos.co.uk/bigbuckbunny/mp4-h264",
+  "category": "huge-resolution",
+  "file": {
+    "name": "Big_Buck_Bunny_4k_10s.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 5823911,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 10.0,
+    "width": 3840,
+    "height": 2160,
+    "hasVideo": true,
+    "rotationDegrees": 0,
+    "frameRateMode": "constant"
+  },
+  "riskHints": ["4k", "huge-resolution"]
+}

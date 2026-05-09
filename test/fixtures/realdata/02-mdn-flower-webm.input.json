@@ -1,0 +1,21 @@
+{
+  "id": "02-mdn-flower-webm",
+  "label": "MDN flower WebM",
+  "sourceUrl": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm",
+  "category": "codec-variant",
+  "file": {
+    "name": "flower.webm",
+    "type": "video/webm",
+    "sizeBytes": 554058,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 5.06,
+    "width": 960,
+    "height": 540,
+    "hasVideo": true,
+    "rotationDegrees": 0,
+    "frameRateMode": "constant"
+  },
+  "riskHints": ["webm", "short"]
+}

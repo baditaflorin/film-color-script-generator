@@ -1,0 +1,21 @@
+{
+  "id": "01-mdn-flower-mp4",
+  "label": "MDN flower MP4",
+  "sourceUrl": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+  "category": "clean",
+  "file": {
+    "name": "flower.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 1128375,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 5.06,
+    "width": 960,
+    "height": 540,
+    "hasVideo": true,
+    "rotationDegrees": 0,
+    "frameRateMode": "constant"
+  },
+  "riskHints": ["clean", "short"]
+}

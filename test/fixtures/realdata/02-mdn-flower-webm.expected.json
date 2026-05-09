@@ -1,0 +1,12 @@
+{
+  "id": "02-mdn-flower-webm",
+  "expectedPass": true,
+  "blocked": false,
+  "expectedWarnings": ["codec-container-variant"],
+  "expectedPlan": {
+    "sampleCountMin": 8,
+    "sampleCountMax": 16,
+    "maxFrameWidthMax": 360
+  },
+  "minConfidence": 0.7
+}

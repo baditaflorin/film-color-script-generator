@@ -1,0 +1,12 @@
+{
+  "id": "08-vfr-screen-recording",
+  "expectedPass": true,
+  "blocked": false,
+  "expectedWarnings": ["variable-frame-rate", "portrait-display"],
+  "expectedPlan": {
+    "sampleCountMin": 20,
+    "sampleCountMax": 40,
+    "maxFrameWidthMax": 360
+  },
+  "minConfidence": 0.52
+}

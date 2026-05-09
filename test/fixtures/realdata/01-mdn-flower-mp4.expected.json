@@ -1,0 +1,12 @@
+{
+  "id": "01-mdn-flower-mp4",
+  "expectedPass": true,
+  "blocked": false,
+  "expectedWarnings": [],
+  "expectedPlan": {
+    "sampleCountMin": 8,
+    "sampleCountMax": 16,
+    "maxFrameWidthMax": 360
+  },
+  "minConfidence": 0.75
+}

@@ -1,0 +1,12 @@
+{
+  "id": "07-cinematic-letterbox",
+  "expectedPass": true,
+  "blocked": false,
+  "expectedWarnings": ["letterbox-risk", "dark-frame-risk"],
+  "expectedPlan": {
+    "sampleCountMin": 28,
+    "sampleCountMax": 48,
+    "maxFrameWidthMax": 360
+  },
+  "minConfidence": 0.5
+}

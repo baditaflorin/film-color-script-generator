@@ -1,0 +1,21 @@
+{
+  "id": "05-rotation-phone",
+  "label": "Phone video with rotation metadata",
+  "sourceUrl": "https://shotstack.io/learn/rotate-videos-using-ffmpeg/",
+  "category": "orientation",
+  "file": {
+    "name": "phone-portrait-rotation.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 15485721,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 18.4,
+    "width": 1920,
+    "height": 1080,
+    "hasVideo": true,
+    "rotationDegrees": 90,
+    "frameRateMode": "variable"
+  },
+  "riskHints": ["rotation-metadata", "portrait-display", "vfr"]
+}

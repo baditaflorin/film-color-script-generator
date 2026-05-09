@@ -1,0 +1,21 @@
+{
+  "id": "04-long-bbb",
+  "label": "Google Big Buck Bunny long sample",
+  "sourceUrl": "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  "category": "long",
+  "file": {
+    "name": "BigBuckBunny.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 158008374,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 596.47,
+    "width": 1280,
+    "height": 720,
+    "hasVideo": true,
+    "rotationDegrees": 0,
+    "frameRateMode": "constant"
+  },
+  "riskHints": ["long", "large"]
+}

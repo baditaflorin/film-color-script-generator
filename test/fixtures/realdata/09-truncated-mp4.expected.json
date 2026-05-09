@@ -1,0 +1,12 @@
+{
+  "id": "09-truncated-mp4",
+  "expectedPass": true,
+  "blocked": true,
+  "expectedWarnings": ["partial-file", "no-usable-video"],
+  "expectedPlan": {
+    "sampleCountMin": 0,
+    "sampleCountMax": 0,
+    "maxFrameWidthMax": 0
+  },
+  "minConfidence": 0.9
+}

@@ -1,0 +1,21 @@
+{
+  "id": "03-w3schools-bbb",
+  "label": "W3Schools Big Buck Bunny clip",
+  "sourceUrl": "https://www.w3schools.com/html/mov_bbb.mp4",
+  "category": "clear-animation-cuts",
+  "file": {
+    "name": "mov_bbb.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 788493,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 10.03,
+    "width": 320,
+    "height": 176,
+    "hasVideo": true,
+    "rotationDegrees": 0,
+    "frameRateMode": "constant"
+  },
+  "riskHints": ["animation", "visible-cuts"]
+}

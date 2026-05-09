@@ -1,0 +1,12 @@
+{
+  "id": "03-w3schools-bbb",
+  "expectedPass": true,
+  "blocked": false,
+  "expectedWarnings": [],
+  "expectedPlan": {
+    "sampleCountMin": 12,
+    "sampleCountMax": 20,
+    "maxFrameWidthMax": 360
+  },
+  "minConfidence": 0.72
+}

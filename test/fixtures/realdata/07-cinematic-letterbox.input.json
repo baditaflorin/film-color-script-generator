@@ -1,0 +1,21 @@
+{
+  "id": "07-cinematic-letterbox",
+  "label": "Blender open movie cinematic clip",
+  "sourceUrl": "https://studio.blender.org/films/",
+  "category": "cinematic-artifacts",
+  "file": {
+    "name": "sintel-letterbox-excerpt.mp4",
+    "type": "video/mp4",
+    "sizeBytes": 42127360,
+    "partial": false
+  },
+  "metadata": {
+    "duration": 66.2,
+    "width": 1920,
+    "height": 1080,
+    "hasVideo": true,
+    "rotationDegrees": 0,
+    "frameRateMode": "constant"
+  },
+  "riskHints": ["letterbox", "dark-scenes", "fades", "titles"]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "06-4k-bbb",
+  "expectedPass": true,
+  "blocked": false,
+  "expectedWarnings": ["huge-resolution"],
+  "expectedPlan": {
+    "sampleCountMin": 12,
+    "sampleCountMax": 24,
+    "maxFrameWidthMax": 320
+  },
+  "minConfidence": 0.6
+}
